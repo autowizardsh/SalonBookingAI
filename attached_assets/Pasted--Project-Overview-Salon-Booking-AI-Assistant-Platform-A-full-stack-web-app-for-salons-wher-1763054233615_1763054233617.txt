@@ -1,0 +1,181 @@
+💇‍♀️ Project Overview — Salon Booking & AI Assistant Platform
+
+A full-stack web app for salons where:
+
+End-users can discover services, stylists, and book appointments through a friendly AI chatbot.
+
+Admins can manage the entire workflow — from services & stylists to availability, bookings, and customers — via an admin dashboard.
+
+Optional: Allow salon staff to see and manage their own bookings.
+
+🧩 Core Modules & Features
+1. Landing & Marketing Pages
+
+Home page with salon introduction, hero section, and CTA to “Book Now”.
+
+Services listing with images, duration, and pricing.
+
+Stylist profiles (bio, specialization, ratings, gallery).
+
+Customer testimonials and contact page.
+
+Optional: Membership plans or promo codes.
+
+2. Booking System
+
+Interactive chatbot handles conversation-based booking:
+
+“I want a haircut on Friday” → chatbot checks availability.
+
+Suggests available stylists and times → user confirms → booking created.
+
+Traditional calendar view for manual booking.
+
+Automatic confirmation emails/SMS (via Twilio or Resend).
+
+Rescheduling & cancellation options.
+
+Time slot management (dynamic availability based on stylist shifts).
+
+3. Admin Panel
+
+Dashboard summary: bookings, revenue, stylist utilization.
+
+CRUD for:
+
+Services (name, duration, price, category)
+
+Stylists (profile, expertise, shift schedule)
+
+Bookings (view, modify, assign stylist)
+
+Users/customers
+
+Calendar overview (see daily/weekly bookings).
+
+Export reports (CSV, PDF).
+
+4. Stylist Portal (Optional)
+
+Login for stylists.
+
+View their upcoming appointments.
+
+Manage availability.
+
+Mark no-shows, completed services.
+
+5. AI Chatbot Assistant
+
+Embedded chat widget powered by OpenAI (GPT-4 or GPT-5-turbo) or Gemini.
+
+Uses structured data from the database to:
+
+Recommend services based on preferences.
+
+Handle appointment booking with backend integration.
+
+Manage basic FAQs (“What are your prices?”, “Who’s available tomorrow?”).
+
+Future extension: Agentic workflows — the AI autonomously checks DB and updates bookings via API.
+
+6. Authentication & Roles
+
+Login/signup (email or social login).
+
+Role-based access: Admin, Stylist, Customer.
+
+Secure session handling using NextAuth.js.
+
+7. Notifications
+
+Email reminders before appointments.
+
+Optional SMS reminders.
+
+Booking status updates via chatbot or email.
+
+8. Analytics & Reports (Phase 2)
+
+Bookings per stylist / service.
+
+Peak hours, revenue trends.
+
+Customer retention & satisfaction.
+
+⚙️ Tech Stack Recommendation
+Frontend
+
+Next.js 15 (App Router) — modern SSR & API routes.
+
+Tailwind CSS + Shadcn UI — clean UI system.
+
+Framer Motion — subtle animations.
+
+React Query / TanStack Query — state management + API data fetching.
+
+Backend
+
+Next.js API routes (light backend for now).
+
+Prisma ORM — schema & database management.
+
+PostgreSQL / Neon's “serverless Postgres” (great for Replit or Vercel).
+
+Future-ready for scaling (e.g., switch to Supabase if needed).
+
+Authentication
+
+NextAuth.js — role-based auth with JWT sessions.
+
+AI Integration
+
+OpenAI API (GPT-4-turbo / GPT-5) or Google Gemini API.
+
+LangChain / Vercel AI SDK — for agentic flows and structured DB calls.
+
+Optional: Postgres Vector Search (pgvector) for context-based AI recall.
+
+Deployment
+
+Frontend + API → Replit (dev) → Vercel (prod).
+
+Database → Neon.tech / Supabase / PlanetScale.
+
+File storage (stylist photos, service images) → UploadThing or Cloudinary.
+
+🧱 Database Schema (High Level)
+
+Tables:
+
+users → (id, name, email, role, password)
+
+stylists → (id, user_id, bio, specialization)
+
+services → (id, name, price, duration)
+
+schedules → (id, stylist_id, day, start_time, end_time)
+
+bookings → (id, user_id, stylist_id, service_id, date, time, status)
+
+messages (optional) → for chatbot conversation logs
+
+🚀 Roadmap (Development Plan)
+Phase	Milestone	Deliverables
+1	Setup & Core UI	Next.js project setup, Tailwind UI, basic pages
+2	Database & Models	Prisma + Postgres + migrations
+3	Admin Dashboard	CRUD for services, stylists, and bookings
+4	Booking Flow	Booking form + availability logic
+5	Chatbot Integration	AI booking assistant + OpenAI API
+6	Authentication	NextAuth roles & secure access
+7	Notifications	Email confirmations & reminders
+8	Polish & Deployment	SEO, performance, and deploy to Replit/Vercel
+🧠 AI Extension Ideas (Future)
+
+“Smart stylist suggestions” (AI recommends the best stylist based on service type).
+
+“AI Marketing Agent” (auto-replies to missed inquiries).
+
+“Dynamic pricing optimizer” (AI suggests best pricing based on booking data).
+
+Multilingual chatbot (English/Hindi).
