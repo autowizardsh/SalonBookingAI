@@ -25,6 +25,7 @@ export interface IStorage {
   getUserByEmail(email: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
   getAllCustomers(): Promise<User[]>;
+  getAllUsers(): Promise<User[]>;
 
   // Services
   getAllServices(): Promise<Service[]>;
@@ -87,6 +88,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAllCustomers(): Promise<User[]> {
+    return await db.select().from(users).where(eq(users.role, "customer"));
+  }
+
+  async getAllUsers(): Promise<User[]> {
     return await db.select().from(users);
   }
 

@@ -53,12 +53,33 @@ function updateUserSession(
 async function upsertUser(
   claims: any,
 ) {
+  const existingUser = await storage.getUser(claims["sub"]);
+  
+  // If user already exists, update their profile but preserve their role
+  if (existingUser) {
+    await storage.upsertUser({
+      id: claims["sub"],
+      email: claims["email"],
+      firstName: claims["first_name"],
+      lastName: claims["last_name"],
+      profileImageUrl: claims["profile_image_url"],
+      role: existingUser.role, // Preserve existing role
+    });
+    return;
+  }
+  
+  // For new users, check if this is the first user in the system
+  const allUsers = await storage.getAllUsers();
+  const isFirstUser = allUsers.length === 0;
+  
+  // First user becomes admin, all others are customers
   await storage.upsertUser({
     id: claims["sub"],
     email: claims["email"],
     firstName: claims["first_name"],
     lastName: claims["last_name"],
     profileImageUrl: claims["profile_image_url"],
+    role: isFirstUser ? "admin" : "customer",
   });
 }
 
