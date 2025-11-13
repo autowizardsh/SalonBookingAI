@@ -16,6 +16,8 @@ function Router() {
 
   return (
     <Switch>
+      <Route path="/admin" component={Admin} />
+      <Route path="/admin/:rest*" component={Admin} />
       {isLoading || !isAuthenticated ? (
         <>
           <Route path="/" component={Landing} />
@@ -27,7 +29,6 @@ function Router() {
           <Route path="/book" component={Booking} />
         </>
       )}
-      <Route path="/admin/:rest*" component={Admin} />
       <Route component={NotFound} />
     </Switch>
   );

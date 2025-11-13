@@ -53,10 +53,13 @@ function updateUserSession(
 async function upsertUser(
   claims: any,
 ) {
+  console.log("[Auth] Upserting user:", claims["sub"], claims["email"]);
   const existingUser = await storage.getUser(claims["sub"]);
+  console.log("[Auth] Existing user found:", !!existingUser, existingUser?.role);
   
   // If user already exists, update their profile but preserve their role
   if (existingUser) {
+    console.log("[Auth] Updating existing user, preserving role:", existingUser.role);
     await storage.upsertUser({
       id: claims["sub"],
       email: claims["email"],
@@ -71,6 +74,7 @@ async function upsertUser(
   // For new users, check if this is the first user in the system
   const allUsers = await storage.getAllUsers();
   const isFirstUser = allUsers.length === 0;
+  console.log("[Auth] Creating new user. Total users:", allUsers.length, "Is first user:", isFirstUser);
   
   // First user becomes admin, all others are customers
   await storage.upsertUser({
@@ -81,6 +85,7 @@ async function upsertUser(
     profileImageUrl: claims["profile_image_url"],
     role: isFirstUser ? "admin" : "customer",
   });
+  console.log("[Auth] User created with role:", isFirstUser ? "admin" : "customer");
 }
 
 export async function setupAuth(app: Express) {

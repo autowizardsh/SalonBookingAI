@@ -23,8 +23,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Auth middleware helpers
   const requireAdmin = async (req: Request, res: Response, next: Function) => {
+    // Check if authentication function exists and user is authenticated
+    if (typeof req.isAuthenticated !== "function" || !req.isAuthenticated()) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
     const user = req.user as any;
-    if (!req.isAuthenticated || !req.isAuthenticated() || !user?.claims?.sub) {
+    if (!user?.claims?.sub) {
       return res.status(401).json({ message: "Unauthorized" });
     }
 
