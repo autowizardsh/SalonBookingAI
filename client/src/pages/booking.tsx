@@ -1,18 +1,19 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
 import { Clock, DollarSign, User, Calendar as CalendarIcon, CheckCircle2 } from "lucide-react";
-import type { Service, Stylist, Schedule } from "@shared/schema";
+import type { Service, Stylist } from "@shared/schema";
 import { format } from "date-fns";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 
 export default function Booking() {
   const { isAuthenticated } = useAuth();
+  const { toast } = useToast();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [selectedService, setSelectedService] = useState<string>("");
   const [selectedStylist, setSelectedStylist] = useState<string>("");
@@ -35,11 +36,47 @@ export default function Booking() {
     "15:00", "15:30", "16:00", "16:30", "17:00", "17:30",
   ];
 
+  const bookingMutation = useMutation({
+    mutationFn: async () => {
+      if (!selectedDate || !selectedService || !selectedStylist || !selectedTime) {
+        throw new Error("Please complete all fields");
+      }
+
+      return await apiRequest("POST", "/api/bookings", {
+        serviceId: selectedService,
+        stylistId: selectedStylist,
+        date: format(selectedDate, "yyyy-MM-dd"),
+        time: selectedTime,
+        status: "pending",
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/user/bookings"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
+      toast({
+        title: "Booking Confirmed!",
+        description: "Your appointment has been submitted. We'll confirm it shortly.",
+      });
+      // Redirect to home page
+      setTimeout(() => {
+        window.location.href = "/";
+      }, 1500);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Booking Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleBooking = () => {
     if (!isAuthenticated) {
       window.location.href = "/api/login";
       return;
     }
+    bookingMutation.mutate();
   };
 
   const isFormComplete = selectedDate && selectedService && selectedStylist && selectedTime;
@@ -268,11 +305,11 @@ export default function Booking() {
                   <Button
                     className="w-full"
                     size="lg"
-                    disabled={!isFormComplete}
+                    disabled={!isFormComplete || bookingMutation.isPending}
                     onClick={handleBooking}
                     data-testid="button-confirm-booking"
                   >
-                    Confirm Booking
+                    {bookingMutation.isPending ? "Booking..." : "Confirm Booking"}
                   </Button>
 
                   {!isAuthenticated && isFormComplete && (
