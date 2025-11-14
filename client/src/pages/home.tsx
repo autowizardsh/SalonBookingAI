@@ -72,6 +72,10 @@ export default function Home() {
                   Admin Dashboard
                 </Button>
               )}
+              <Button variant="outline" onClick={() => window.location.href = "/profile"} data-testid="button-profile">
+                <User className="w-4 h-4 mr-2" />
+                My Profile
+              </Button>
               <Button variant="outline" onClick={() => window.location.href = "/api/logout"} data-testid="button-logout">
                 Logout
               </Button>
