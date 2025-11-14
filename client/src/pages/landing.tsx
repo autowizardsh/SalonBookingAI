@@ -370,7 +370,7 @@ export default function Landing() {
             </div>
           </div>
           <div className="mt-8 pt-8 border-t text-center text-sm text-muted-foreground">
-            <p>© 2024 Elegance Salon. All rights reserved.</p>
+            <p>© 2025 Elegance Salon. All rights reserved.</p>
           </div>
         </div>
       </footer>
