@@ -435,8 +435,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // AI Chat endpoint
-  app.post("/api/chat", isAuthenticated, async (req: Request, res: Response) => {
+  // AI Chat endpoint - Available to all users (no auth required)
+  app.post("/api/chat", async (req: Request, res: Response) => {
     try {
       const { message, history } = req.body;
 
