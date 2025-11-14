@@ -32,6 +32,7 @@ export const users = pgTable("users", {
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
   role: varchar("role", { length: 20 }).notNull().default("customer"),
+  stylistId: varchar("stylist_id"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -148,8 +149,12 @@ export const servicesRelations = relations(services, ({ many }) => ({
   stylistServices: many(stylistServices),
 }));
 
-export const usersRelations = relations(users, ({ many }) => ({
+export const usersRelations = relations(users, ({ many, one }) => ({
   bookings: many(bookings),
+  stylist: one(stylists, {
+    fields: [users.stylistId],
+    references: [stylists.id],
+  }),
 }));
 
 export const bookingsRelations = relations(bookings, ({ one }) => ({

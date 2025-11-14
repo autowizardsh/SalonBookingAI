@@ -24,8 +24,10 @@ export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
+  updateUser(id: string, updates: Partial<UpsertUser>): Promise<User | undefined>;
   getAllCustomers(): Promise<User[]>;
   getAllUsers(): Promise<User[]>;
+  getUserByStylistId(stylistId: string): Promise<User | undefined>;
 
   // Services
   getAllServices(): Promise<Service[]>;
@@ -49,6 +51,7 @@ export interface IStorage {
   // Bookings
   getAllBookings(): Promise<Booking[]>;
   getUserBookings(userId: string): Promise<Booking[]>;
+  getStylistBookings(stylistId: string): Promise<Booking[]>;
   getBooking(id: string): Promise<Booking | undefined>;
   createBooking(booking: InsertBooking): Promise<Booking>;
   updateBookingStatus(id: string, status: string): Promise<Booking | undefined>;
@@ -93,6 +96,23 @@ export class DatabaseStorage implements IStorage {
 
   async getAllUsers(): Promise<User[]> {
     return await db.select().from(users);
+  }
+
+  async updateUser(id: string, updates: Partial<UpsertUser>): Promise<User | undefined> {
+    const [updated] = await db
+      .update(users)
+      .set({
+        ...updates,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, id))
+      .returning();
+    return updated;
+  }
+
+  async getUserByStylistId(stylistId: string): Promise<User | undefined> {
+    const result = await db.select().from(users).where(eq(users.stylistId, stylistId));
+    return result[0];
   }
 
   // Services
@@ -175,6 +195,14 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(bookings)
       .where(eq(bookings.userId, userId))
+      .orderBy(desc(bookings.createdAt));
+  }
+
+  async getStylistBookings(stylistId: string): Promise<Booking[]> {
+    return await db
+      .select()
+      .from(bookings)
+      .where(eq(bookings.stylistId, stylistId))
       .orderBy(desc(bookings.createdAt));
   }
 

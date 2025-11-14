@@ -366,6 +366,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Stylist Portal Routes
+  app.get("/api/stylist/bookings", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const user = req.user as any;
+      const userId = user.claims.sub;
+      const dbUser = await storage.getUser(userId);
+      
+      if (!dbUser || !dbUser.stylistId) {
+        return res.status(403).json({ message: "Not a stylist account" });
+      }
+
+      const bookings = await storage.getStylistBookings(dbUser.stylistId);
+      res.json(bookings);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/stylist/profile", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const user = req.user as any;
+      const userId = user.claims.sub;
+      const dbUser = await storage.getUser(userId);
+      
+      if (!dbUser || !dbUser.stylistId) {
+        return res.status(403).json({ message: "Not a stylist account" });
+      }
+
+      const stylist = await storage.getStylist(dbUser.stylistId);
+      if (!stylist) {
+        return res.status(404).json({ message: "Stylist profile not found" });
+      }
+
+      res.json(stylist);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/stylist/schedules", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const user = req.user as any;
+      const userId = user.claims.sub;
+      const dbUser = await storage.getUser(userId);
+      
+      if (!dbUser || !dbUser.stylistId) {
+        return res.status(403).json({ message: "Not a stylist account" });
+      }
+
+      const schedules = await storage.getStylistSchedules(dbUser.stylistId);
+      res.json(schedules);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // AI Chat endpoint
   app.post("/api/chat", isAuthenticated, async (req: Request, res: Response) => {
     try {

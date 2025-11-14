@@ -10,6 +10,7 @@ import Home from "@/pages/home";
 import Booking from "@/pages/booking";
 import Admin from "@/pages/admin";
 import Profile from "@/pages/profile";
+import StylistPortal from "@/pages/stylist-portal";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -29,6 +30,7 @@ function Router() {
           <Route path="/" component={Home} />
           <Route path="/book" component={Booking} />
           <Route path="/profile" component={Profile} />
+          <Route path="/stylist" component={StylistPortal} />
         </>
       )}
       <Route component={NotFound} />
