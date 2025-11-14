@@ -2,7 +2,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
-import { Star, Clock, DollarSign, Calendar, Scissors, Sparkles } from "lucide-react";
+import { Star, Clock, DollarSign, Calendar, Scissors, Sparkles, LogIn } from "lucide-react";
+import { Link } from "wouter";
 import type { Service, Stylist } from "@shared/schema";
 import heroImage from "@assets/generated_images/Salon_hero_interior_shot_9deda2ec.png";
 import hairCutImage from "@assets/generated_images/Hair_cutting_service_photo_375838fd.png";
@@ -59,6 +60,12 @@ export default function Landing() {
               <a href="#services" className="text-sm hover-elevate px-3 py-2 rounded-md" data-testid="link-services">Services</a>
               <a href="#stylists" className="text-sm hover-elevate px-3 py-2 rounded-md" data-testid="link-stylists">Stylists</a>
               <a href="#testimonials" className="text-sm hover-elevate px-3 py-2 rounded-md" data-testid="link-testimonials">Testimonials</a>
+              <Link href="/admin/login">
+                <Button variant="ghost" size="sm" data-testid="button-admin-login">
+                  <LogIn className="w-4 h-4 mr-2" />
+                  Admin Login
+                </Button>
+              </Link>
               <Button onClick={scrollToBooking} data-testid="button-book-now-header">
                 Book Now
               </Button>

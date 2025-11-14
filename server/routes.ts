@@ -29,12 +29,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
 
     const user = req.user as any;
-    if (!user?.claims?.sub) {
+    // Support both OIDC (user.claims.sub) and local auth (user.id)
+    const userId = user.provider === 'local' ? user.id : user?.claims?.sub;
+    
+    if (!userId) {
       return res.status(401).json({ message: "Unauthorized" });
     }
 
     try {
-      const userId = user.claims.sub;
       const dbUser = await storage.getUser(userId);
       if (!dbUser || dbUser.role !== "admin") {
         return res.status(403).json({ message: "Admin access required" });
@@ -49,7 +51,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/auth/user", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const user = req.user as any;
-      const userId = user.claims.sub;
+      // Support both OIDC (user.claims.sub) and local auth (user.id)
+      const userId = user.provider === 'local' ? user.id : user.claims.sub;
       const dbUser = await storage.getUser(userId);
       res.json(dbUser);
     } catch (error: any) {

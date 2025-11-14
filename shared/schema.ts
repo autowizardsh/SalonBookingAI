@@ -28,11 +28,14 @@ export const sessions = pgTable(
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   email: varchar("email").unique(),
+  username: varchar("username", { length: 50 }).unique(),
+  passwordHash: text("password_hash"),
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
   role: varchar("role", { length: 20 }).notNull().default("customer"),
   stylistId: varchar("stylist_id"),
+  provider: varchar("provider", { length: 20 }).default("oidc"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

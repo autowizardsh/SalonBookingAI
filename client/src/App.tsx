@@ -11,6 +11,7 @@ import Booking from "@/pages/booking";
 import Admin from "@/pages/admin";
 import Profile from "@/pages/profile";
 import StylistPortal from "@/pages/stylist-portal";
+import AdminLogin from "@/pages/admin-login";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -18,6 +19,7 @@ function Router() {
 
   return (
     <Switch>
+      <Route path="/admin/login" component={AdminLogin} />
       <Route path="/admin" component={Admin} />
       <Route path="/admin/:rest*" component={Admin} />
       {isLoading || !isAuthenticated ? (
