@@ -1,7 +1,7 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { setupAuth, isAuthenticated } from "./replitAuth";
+import { setupAuth, isAuthenticated, getRequestUserId } from "./replitAuth";
 import OpenAI from "openai";
 import {
   insertServiceSchema,
@@ -28,10 +28,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(401).json({ message: "Unauthorized" });
     }
 
-    const user = req.user as any;
-    // Support both OIDC (user.claims.sub) and local auth (user.id)
-    const userId = user.provider === 'local' ? user.id : user?.claims?.sub;
-    
+    const userId = getRequestUserId(req);
     if (!userId) {
       return res.status(401).json({ message: "Unauthorized" });
     }
@@ -50,9 +47,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get current user
   app.get("/api/auth/user", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const user = req.user as any;
-      // Support both OIDC (user.claims.sub) and local auth (user.id)
-      const userId = user.provider === 'local' ? user.id : user.claims.sub;
+      const userId = getRequestUserId(req);
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
       const dbUser = await storage.getUser(userId);
       res.json(dbUser);
     } catch (error: any) {
@@ -209,8 +207,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/user/bookings", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const user = req.user as any;
-      const userId = user.claims.sub;
+      const userId = getRequestUserId(req);
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
       const bookings = await storage.getUserBookings(userId);
       res.json(bookings);
     } catch (error: any) {
@@ -220,8 +220,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/bookings/:id", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const user = req.user as any;
-      const userId = user.claims.sub;
+      const userId = getRequestUserId(req);
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
       const dbUser = await storage.getUser(userId);
       
       const booking = await storage.getBooking(req.params.id);
@@ -240,8 +242,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/bookings", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const user = req.user as any;
-      const userId = user.claims.sub;
+      const userId = getRequestUserId(req);
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
       const dbUser = await storage.getUser(userId);
       
       const validated = insertBookingSchema.parse({
@@ -372,8 +376,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Stylist Portal Routes
   app.get("/api/stylist/bookings", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const user = req.user as any;
-      const userId = user.claims.sub;
+      const userId = getRequestUserId(req);
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
       const dbUser = await storage.getUser(userId);
       
       if (!dbUser || !dbUser.stylistId) {
@@ -389,8 +395,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/stylist/profile", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const user = req.user as any;
-      const userId = user.claims.sub;
+      const userId = getRequestUserId(req);
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
       const dbUser = await storage.getUser(userId);
       
       if (!dbUser || !dbUser.stylistId) {
@@ -410,8 +418,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/stylist/schedules", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const user = req.user as any;
-      const userId = user.claims.sub;
+      const userId = getRequestUserId(req);
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
       const dbUser = await storage.getUser(userId);
       
       if (!dbUser || !dbUser.stylistId) {

@@ -248,7 +248,7 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
 };
 
 // Helper function to get userId from request (supports both OIDC and local auth)
-export function getRequestUserId(req: Request): string | null {
+export function getRequestUserId(req: any): string | null {
   const user = req.user as any;
   if (!user) return null;
   return user.provider === 'local' ? user.id : user.claims?.sub || null;

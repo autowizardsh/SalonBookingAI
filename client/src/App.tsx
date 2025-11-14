@@ -12,6 +12,7 @@ import Admin from "@/pages/admin";
 import Profile from "@/pages/profile";
 import StylistPortal from "@/pages/stylist-portal";
 import AdminLogin from "@/pages/admin-login";
+import Login from "@/pages/login";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -19,9 +20,11 @@ function Router() {
 
   return (
     <Switch>
+      <Route path="/login" component={Login} />
       <Route path="/admin/login" component={AdminLogin} />
       <Route path="/admin" component={Admin} />
       <Route path="/admin/:rest*" component={Admin} />
+      <Route path="/stylist" component={StylistPortal} />
       {isLoading || !isAuthenticated ? (
         <>
           <Route path="/" component={Landing} />
@@ -32,7 +35,6 @@ function Router() {
           <Route path="/" component={Home} />
           <Route path="/book" component={Booking} />
           <Route path="/profile" component={Profile} />
-          <Route path="/stylist" component={StylistPortal} />
         </>
       )}
       <Route component={NotFound} />

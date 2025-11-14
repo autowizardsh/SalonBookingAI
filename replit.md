@@ -15,6 +15,30 @@ A full-stack web application for salon appointment booking featuring an AI-power
 
 Preferred communication style: Simple, everyday language.
 
+## Login Credentials
+
+**Admin Account:**
+- Username: `admin`
+- Password: `admin`
+- Access: Full admin dashboard at `/admin`
+
+**Stylist Accounts:**
+- Username: `emma` | Password: `emma` | Linked to: Emma Rodriguez
+- Username: `sophia` | Password: `sophia` | Linked to: Sophia Chen  
+- Username: `isabella` | Password: `isabella` | Linked to: Isabella Martinez
+- Access: Stylist portal at `/stylist` to view appointments, schedules, and profile
+
+**Login Pages:**
+- Universal login at `/login` for all staff (admin + stylists) using username/password
+- Admin-specific login at `/admin/login` (legacy, redirects to /login)
+- Customers use Replit Auth (OIDC) for bookings - no username/password
+
+**Authentication Design:**
+- Staff (admin + stylists): Local username/password authentication via Passport-local
+- Customers: OIDC authentication via Replit Auth
+- All endpoints support both auth types using `getRequestUserId()` helper function
+- Role-based auto-redirect after login: admin → /admin, stylist → /stylist
+
 ## System Architecture
 
 ### Frontend Architecture

@@ -60,10 +60,10 @@ export default function Landing() {
               <a href="#services" className="text-sm hover-elevate px-3 py-2 rounded-md" data-testid="link-services">Services</a>
               <a href="#stylists" className="text-sm hover-elevate px-3 py-2 rounded-md" data-testid="link-stylists">Stylists</a>
               <a href="#testimonials" className="text-sm hover-elevate px-3 py-2 rounded-md" data-testid="link-testimonials">Testimonials</a>
-              <Link href="/admin/login">
-                <Button variant="ghost" size="sm" data-testid="button-admin-login">
+              <Link href="/login">
+                <Button variant="ghost" size="sm" data-testid="button-staff-login">
                   <LogIn className="w-4 h-4 mr-2" />
-                  Admin Login
+                  Staff Login
                 </Button>
               </Link>
               <Button onClick={scrollToBooking} data-testid="button-book-now-header">
