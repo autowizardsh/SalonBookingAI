@@ -611,18 +611,19 @@ BOOKING PROCESS (follow in order):
 2. COLLECT STYLIST: Ask which stylist they prefer (or recommend based on service)
 3. COLLECT DATE: Ask for preferred date (YYYY-MM-DD format)
 4. COLLECT TIME: Ask for preferred time (HH:MM format, 24-hour)
-5. CHECK AVAILABILITY: Use check_availability function
-6. COLLECT CONTACT INFO: Ask for full name, email, and phone number
-7. CONFIRM BOOKING: Use create_booking function
-8. PROVIDE CONFIRMATION: Give them booking details
+5. CHECK AVAILABILITY: IMMEDIATELY call check_availability function
+6. If available: COLLECT CONTACT INFO (full name, email, phone number)
+7. If unavailable: Suggest alternative times and repeat from step 4
+8. Once you have contact info + confirmed availability: IMMEDIATELY call create_booking function
+9. After successful booking: Provide confirmation with all booking details
 
-IMPORTANT RULES:
-- Collect information ONE step at a time
-- Always check availability BEFORE collecting contact info
-- If slot is unavailable, suggest different times within stylist's working hours
-- Stylists work specific hours - check their schedules
-- Validate all information before creating booking
-- Be conversational but efficient
+CRITICAL RULES:
+- MUST call check_availability as soon as you have service, stylist, date, time
+- MUST call create_booking as soon as you have contact info + confirmed availability
+- Do NOT ask for contact info before checking availability
+- Do NOT ask to "confirm availability again" after already checking it
+- Once availability is confirmed and contact info collected, CREATE THE BOOKING immediately
+- Be conversational but efficient - avoid unnecessary back-and-forth
 
 Current Services:
 ${services.map((s) => `- ${s.name} (ID: ${s.id}): $${s.price}, ${s.duration} minutes - ${s.description}`).join("\n")}
@@ -690,6 +691,8 @@ Be friendly, helpful, and guide them smoothly through the booking!`;
         const functionName = responseMessage.function_call.name;
         const functionArgs = JSON.parse(responseMessage.function_call.arguments);
 
+        console.log(`[AI FUNCTION CALL] ${functionName}:`, JSON.stringify(functionArgs, null, 2));
+
         let functionResult: any = {};
 
         if (functionName === "check_availability") {
@@ -700,14 +703,17 @@ Be friendly, helpful, and guide them smoothly through the booking!`;
             body: JSON.stringify(functionArgs),
           });
           functionResult = await availResponse.json();
+          console.log(`[AVAILABILITY RESULT]:`, JSON.stringify(functionResult, null, 2));
         } else if (functionName === "create_booking") {
           // Call guest booking endpoint
+          console.log(`[CREATING BOOKING]:`, JSON.stringify(functionArgs, null, 2));
           const bookingResponse = await fetch(`http://localhost:${process.env.PORT || 5000}/api/bookings/guest`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(functionArgs),
           });
           functionResult = await bookingResponse.json();
+          console.log(`[BOOKING RESULT]:`, JSON.stringify(functionResult, null, 2));
         }
 
         // Send function result back to AI for final response
