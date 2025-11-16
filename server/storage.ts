@@ -49,6 +49,9 @@ export interface IStorage {
   createSchedule(schedule: InsertSchedule): Promise<Schedule>;
   deleteSchedule(id: string): Promise<void>;
 
+  // Stylist Services
+  stylistOffersService(stylistId: string, serviceId: string): Promise<boolean>;
+
   // Bookings
   getAllBookings(): Promise<Booking[]>;
   getUserBookings(userId: string): Promise<Booking[]>;
@@ -189,6 +192,20 @@ export class DatabaseStorage implements IStorage {
 
   async deleteSchedule(id: string): Promise<void> {
     await db.delete(schedules).where(eq(schedules.id, id));
+  }
+
+  // Stylist Services
+  async stylistOffersService(stylistId: string, serviceId: string): Promise<boolean> {
+    const result = await db
+      .select()
+      .from(stylistServices)
+      .where(
+        and(
+          eq(stylistServices.stylistId, stylistId),
+          eq(stylistServices.serviceId, serviceId)
+        )
+      );
+    return result.length > 0;
   }
 
   // Bookings

@@ -240,6 +240,120 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Guest booking endpoint - allows unauthenticated bookings with customer info
+  app.post("/api/bookings/guest", async (req: Request, res: Response) => {
+    try {
+      const { customerName, customerEmail, customerPhone, serviceId, stylistId, date, time, notes } = req.body;
+
+      // Validate required fields
+      if (!customerName || !customerEmail || !serviceId || !stylistId || !date || !time) {
+        return res.status(400).json({ 
+          message: "Missing required fields: customerName, customerEmail, serviceId, stylistId, date, time" 
+        });
+      }
+
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(customerEmail)) {
+        return res.status(400).json({ message: "Invalid email format" });
+      }
+
+      // Get service details
+      const service = await storage.getService(serviceId);
+      if (!service) {
+        return res.status(400).json({ message: "Service not found" });
+      }
+
+      // Check availability
+      const duration = service.duration || 60;
+      const [hours, minutes] = time.split(":").map(Number);
+      const startMinutes = hours * 60 + minutes;
+      const endMinutes = startMinutes + duration;
+
+      // Validate stylist offers this service
+      const offersService = await storage.stylistOffersService(stylistId, serviceId);
+      if (!offersService) {
+        return res.status(400).json({ message: "This stylist does not offer the selected service" });
+      }
+
+      // Check stylist schedule
+      const schedules = await storage.getStylistSchedules(stylistId);
+      // Parse date in UTC to avoid timezone issues
+      const [year, month, day] = date.split('-').map(Number);
+      const requestDate = new Date(Date.UTC(year, month - 1, day));
+      const dayIndex = requestDate.getUTCDay(); // 0 = Sunday, 6 = Saturday
+      const daySchedule = schedules.find(s => parseInt(s.dayOfWeek, 10) === dayIndex && s.isAvailable);
+      
+      const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+      if (!daySchedule) {
+        return res.status(400).json({ message: `Stylist is not available on ${dayNames[dayIndex]}s` });
+      }
+
+      const [schedStartHour, schedStartMin] = daySchedule.startTime.split(":").map(Number);
+      const [schedEndHour, schedEndMin] = daySchedule.endTime.split(":").map(Number);
+      const schedStartMinutes = schedStartHour * 60 + schedStartMin;
+      const schedEndMinutes = schedEndHour * 60 + schedEndMin;
+
+      if (startMinutes < schedStartMinutes || endMinutes > schedEndMinutes) {
+        return res.status(400).json({ 
+          message: `Stylist works ${daySchedule.startTime} - ${daySchedule.endTime} on ${dayNames[dayIndex]}s` 
+        });
+      }
+
+      // Check for booking conflicts
+      const existingBookings = await storage.getStylistBookingsOnDate(stylistId, date);
+      for (const booking of existingBookings) {
+        if (booking.status === "cancelled") continue;
+
+        const bookingService = await storage.getService(booking.serviceId);
+        const bookingDuration = bookingService?.duration || 60;
+        const [bHours, bMinutes] = booking.time.split(":").map(Number);
+        const bookingStartMinutes = bHours * 60 + bMinutes;
+        const bookingEndMinutes = bookingStartMinutes + bookingDuration;
+
+        if (
+          (startMinutes >= bookingStartMinutes && startMinutes < bookingEndMinutes) ||
+          (endMinutes > bookingStartMinutes && endMinutes <= bookingEndMinutes) ||
+          (startMinutes <= bookingStartMinutes && endMinutes >= bookingEndMinutes)
+        ) {
+          return res.status(409).json({ message: "This time slot is already booked" });
+        }
+      }
+
+      // Create or get guest user
+      const guestUser = await storage.upsertUser({
+        email: customerEmail,
+        firstName: customerName.split(' ')[0],
+        lastName: customerName.split(' ').slice(1).join(' ') || '',
+        role: 'customer',
+        provider: 'guest',
+      });
+
+      // Create booking
+      const booking = await storage.createBooking({
+        userId: guestUser.id,
+        serviceId,
+        stylistId,
+        date,
+        time,
+        status: 'pending',
+        customerName,
+        customerEmail,
+        customerPhone: customerPhone || null,
+        notes: notes || null,
+      });
+
+      res.status(201).json({ 
+        success: true, 
+        booking,
+        message: `Booking confirmed for ${customerName} on ${date} at ${time}` 
+      });
+    } catch (error: any) {
+      console.error("Guest booking error:", error);
+      res.status(500).json({ message: error.message || "Failed to create booking" });
+    }
+  });
+
   app.post("/api/bookings", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const userId = getRequestUserId(req);
@@ -326,18 +440,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Check availability endpoint
+  // Check availability endpoint - validates against both schedules and existing bookings
   app.post("/api/availability", async (req: Request, res: Response) => {
     try {
       const { stylistId, date, time, serviceId } = req.body;
 
-      const existingBookings = await storage.getStylistBookingsOnDate(stylistId, date);
+      // Get service duration
       const service = await storage.getService(serviceId);
       const duration = service?.duration || 60;
 
+      // Parse requested time
       const [hours, minutes] = time.split(":").map(Number);
       const newStartMinutes = hours * 60 + minutes;
       const newEndMinutes = newStartMinutes + duration;
+
+      // Validate stylist offers this service
+      const offersService = await storage.stylistOffersService(stylistId, serviceId);
+      if (!offersService) {
+        return res.json({ 
+          available: false, 
+          reason: "This stylist does not offer the selected service" 
+        });
+      }
+
+      // Check against stylist schedule (working hours)
+      const schedules = await storage.getStylistSchedules(stylistId);
+      // Parse date in UTC to avoid timezone issues
+      const [year, month, day] = date.split('-').map(Number);
+      const requestDate = new Date(Date.UTC(year, month - 1, day));
+      const dayIndex = requestDate.getUTCDay(); // 0 = Sunday, 6 = Saturday
+      
+      const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+      const daySchedule = schedules.find(s => parseInt(s.dayOfWeek, 10) === dayIndex && s.isAvailable);
+      if (!daySchedule) {
+        return res.json({ 
+          available: false, 
+          reason: `Stylist is not available on ${dayNames[dayIndex]}s` 
+        });
+      }
+
+      // Check if requested time is within working hours
+      const [schedStartHour, schedStartMin] = daySchedule.startTime.split(":").map(Number);
+      const [schedEndHour, schedEndMin] = daySchedule.endTime.split(":").map(Number);
+      const schedStartMinutes = schedStartHour * 60 + schedStartMin;
+      const schedEndMinutes = schedEndHour * 60 + schedEndMin;
+
+      if (newStartMinutes < schedStartMinutes || newEndMinutes > schedEndMinutes) {
+        return res.json({ 
+          available: false, 
+          reason: `Stylist works ${daySchedule.startTime} - ${daySchedule.endTime} on ${dayNames[dayIndex]}s` 
+        });
+      }
+
+      // Check against existing bookings
+      const existingBookings = await storage.getStylistBookingsOnDate(stylistId, date);
 
       for (const booking of existingBookings) {
         if (booking.status === "cancelled") continue;
@@ -353,7 +509,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           (newEndMinutes > bookingStartMinutes && newEndMinutes <= bookingEndMinutes) ||
           (newStartMinutes <= bookingStartMinutes && newEndMinutes >= bookingEndMinutes)
         ) {
-          return res.json({ available: false });
+          return res.json({ 
+            available: false, 
+            reason: "This time slot is already booked" 
+          });
         }
       }
 
@@ -444,25 +603,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const services = await storage.getAllServices();
       const stylists = await storage.getAllStylists();
 
-      // Build system context
-      const systemContext = `You are a helpful AI assistant for Elegance Salon booking system. You can help customers:
-1. Browse available services and their prices
-2. Learn about our stylists
-3. Check availability and book appointments
-4. Answer questions about the salon
+      // Build system context with step-by-step booking guidance
+      const systemContext = `You are a helpful AI booking assistant for Elegance Salon. Your goal is to guide customers through a step-by-step booking process.
+
+BOOKING PROCESS (follow in order):
+1. COLLECT SERVICE: Ask which service they want
+2. COLLECT STYLIST: Ask which stylist they prefer (or recommend based on service)
+3. COLLECT DATE: Ask for preferred date (YYYY-MM-DD format)
+4. COLLECT TIME: Ask for preferred time (HH:MM format, 24-hour)
+5. CHECK AVAILABILITY: Use check_availability function
+6. COLLECT CONTACT INFO: Ask for full name, email, and phone number
+7. CONFIRM BOOKING: Use create_booking function
+8. PROVIDE CONFIRMATION: Give them booking details
+
+IMPORTANT RULES:
+- Collect information ONE step at a time
+- Always check availability BEFORE collecting contact info
+- If slot is unavailable, suggest different times within stylist's working hours
+- Stylists work specific hours - check their schedules
+- Validate all information before creating booking
+- Be conversational but efficient
 
 Current Services:
-${services.map((s) => `- ${s.name} (${s.category}): $${s.price}, ${s.duration} minutes`).join("\n")}
+${services.map((s) => `- ${s.name} (ID: ${s.id}): $${s.price}, ${s.duration} minutes - ${s.description}`).join("\n")}
 
 Available Stylists:
-${stylists.map((s) => `- ${s.name}: ${s.specialization} (${s.yearsExperience}+ years experience)`).join("\n")}
+${stylists.map((s) => `- ${s.name} (ID: ${s.id}): ${s.specialization}, ${s.yearsExperience}+ years exp`).join("\n")}
 
-When helping with bookings, ask for:
-1. Which service they want
-2. Preferred stylist (or you can recommend one)
-3. Preferred date and time
-
-Be friendly, professional, and helpful. Keep responses concise but informative.`;
+Be friendly, helpful, and guide them smoothly through the booking!`;
 
       const messages = [
         { role: "system", content: systemContext },
@@ -470,16 +638,101 @@ Be friendly, professional, and helpful. Keep responses concise but informative.`
         { role: "user", content: message },
       ];
 
+      // Define functions the AI can call
+      const functions = [
+        {
+          name: "check_availability",
+          description: "Check if a stylist is available at a specific date and time for a service",
+          parameters: {
+            type: "object",
+            properties: {
+              stylistId: { type: "string", description: "The stylist ID" },
+              serviceId: { type: "string", description: "The service ID" },
+              date: { type: "string", description: "Date in YYYY-MM-DD format" },
+              time: { type: "string", description: "Time in HH:MM 24-hour format" },
+            },
+            required: ["stylistId", "serviceId", "date", "time"],
+          },
+        },
+        {
+          name: "create_booking",
+          description: "Create a confirmed booking after collecting all required information and verifying availability",
+          parameters: {
+            type: "object",
+            properties: {
+              customerName: { type: "string", description: "Customer's full name" },
+              customerEmail: { type: "string", description: "Customer's email address" },
+              customerPhone: { type: "string", description: "Customer's phone number" },
+              serviceId: { type: "string", description: "The service ID" },
+              stylistId: { type: "string", description: "The stylist ID" },
+              date: { type: "string", description: "Date in YYYY-MM-DD format" },
+              time: { type: "string", description: "Time in HH:MM 24-hour format" },
+              notes: { type: "string", description: "Optional booking notes" },
+            },
+            required: ["customerName", "customerEmail", "serviceId", "stylistId", "date", "time"],
+          },
+        },
+      ];
+
       const completion = await openai.chat.completions.create({
-        model: "gpt-4o-mini", // Using gpt-4o-mini for cost-effectiveness
+        model: "gpt-4o-mini",
         messages: messages as any,
         temperature: 0.7,
         max_completion_tokens: 500,
+        functions: functions as any,
+        function_call: "auto",
       });
 
-      const response = completion.choices[0]?.message?.content || "I'm sorry, I couldn't process that.";
+      const responseMessage = completion.choices[0]?.message;
 
-      res.json({ response });
+      // Check if AI wants to call a function
+      if (responseMessage?.function_call) {
+        const functionName = responseMessage.function_call.name;
+        const functionArgs = JSON.parse(responseMessage.function_call.arguments);
+
+        let functionResult: any = {};
+
+        if (functionName === "check_availability") {
+          // Call availability endpoint
+          const availResponse = await fetch(`http://localhost:${process.env.PORT || 5000}/api/availability`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(functionArgs),
+          });
+          functionResult = await availResponse.json();
+        } else if (functionName === "create_booking") {
+          // Call guest booking endpoint
+          const bookingResponse = await fetch(`http://localhost:${process.env.PORT || 5000}/api/bookings/guest`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(functionArgs),
+          });
+          functionResult = await bookingResponse.json();
+        }
+
+        // Send function result back to AI for final response
+        const secondCompletion = await openai.chat.completions.create({
+          model: "gpt-4o-mini",
+          messages: [
+            ...messages,
+            responseMessage,
+            {
+              role: "function",
+              name: functionName,
+              content: JSON.stringify(functionResult),
+            },
+          ] as any,
+          temperature: 0.7,
+          max_completion_tokens: 500,
+        });
+
+        const finalResponse = secondCompletion.choices[0]?.message?.content || "Booking processed!";
+        res.json({ response: finalResponse });
+      } else {
+        // No function call, just return the response
+        const response = responseMessage?.content || "I'm sorry, I couldn't process that.";
+        res.json({ response });
+      }
     } catch (error: any) {
       console.error("Chat error:", error);
       res.status(500).json({ message: "Failed to process chat message" });
