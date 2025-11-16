@@ -38,7 +38,7 @@ export function ChatWidget() {
         message: userMessage,
         history: messages,
       });
-      return response;
+      return await response.json();
     },
     onSuccess: (data: any) => {
       setMessages((prev) => [
