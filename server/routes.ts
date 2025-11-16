@@ -603,15 +603,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const services = await storage.getAllServices();
       const stylists = await storage.getAllStylists();
 
+      // Get current date/time for context
+      const now = new Date();
+      const today = now.toISOString().split('T')[0]; // YYYY-MM-DD
+      const currentTime = now.toTimeString().split(' ')[0].substring(0, 5); // HH:MM
+      const dayOfWeek = now.toLocaleDateString('en-US', { weekday: 'long' });
+
       // Build system context with step-by-step booking guidance
       const systemContext = `You are a helpful AI booking assistant for Elegance Salon. Your goal is to guide customers through a step-by-step booking process.
+
+TODAY'S DATE & TIME:
+- Current date: ${today} (${dayOfWeek})
+- Current time: ${currentTime}
+
+IMPORTANT: Users will speak naturally! They'll say things like:
+- "tomorrow" (means ${today} + 1 day)
+- "next Friday" (calculate the next Friday from ${today})
+- "this Thursday" (calculate the upcoming Thursday)
+- "2pm" or "2:30" (convert to 14:00 or 14:30 in 24-hour format)
+- "in the morning" (suggest 9am-12pm)
+- "afternoon" (suggest 1pm-5pm)
+
+YOU must convert these natural expressions into proper YYYY-MM-DD dates and HH:MM times.
+NEVER ask users to format dates - you do the conversion!
 
 BOOKING PROCESS (follow in order):
 1. COLLECT SERVICE: Ask which service they want
 2. COLLECT STYLIST: Ask which stylist they prefer (or recommend based on service)
-3. COLLECT DATE: Ask for preferred date (YYYY-MM-DD format)
-4. COLLECT TIME: Ask for preferred time (HH:MM format, 24-hour)
-5. CHECK AVAILABILITY: IMMEDIATELY call check_availability function
+3. COLLECT DATE: Ask "When would you like your appointment?" (accept natural language like "tomorrow", "Friday", etc.)
+4. COLLECT TIME: Ask "What time works best?" (accept "2pm", "morning", "afternoon", etc.)
+5. CHECK AVAILABILITY: IMMEDIATELY call check_availability function (with converted YYYY-MM-DD and HH:MM)
 6. If available: COLLECT CONTACT INFO (full name, email, phone number)
 7. If unavailable: Suggest alternative times and repeat from step 4
 8. Once you have contact info + confirmed availability: IMMEDIATELY call create_booking function
@@ -624,6 +645,7 @@ CRITICAL RULES:
 - Do NOT ask to "confirm availability again" after already checking it
 - Once availability is confirmed and contact info collected, CREATE THE BOOKING immediately
 - Be conversational but efficient - avoid unnecessary back-and-forth
+- ALWAYS convert natural language dates/times to proper formats before calling functions
 
 Current Services:
 ${services.map((s) => `- ${s.name} (ID: ${s.id}): $${s.price}, ${s.duration} minutes - ${s.description}`).join("\n")}
