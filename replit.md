@@ -88,9 +88,24 @@ Draws inspiration from premium booking platforms (Airbnb UX, Treatwell flows, Gl
 - Status updates and relationship management (stylist-service associations)
 
 **AI Integration:**
-- OpenAI-compatible API through Replit AI Integrations
-- Conversational booking assistant handling natural language queries
-- Context-aware responses with booking history and availability checking
+- OpenAI-compatible API through Replit AI Integrations (gpt-4o-mini)
+- Function calling enabled with two specialized tools:
+  - `check_availability`: Real-time availability validation against stylist schedules and bookings
+  - `create_booking`: Guest booking creation without authentication required
+- Conversational booking assistant guides users through multi-step flow:
+  1. Service/stylist selection
+  2. Date and time collection
+  3. Availability verification
+  4. Contact information gathering (name, email, phone)
+  5. Booking confirmation and creation
+- Comprehensive validation chain:
+  - Stylist-service relationship verification (junction table)
+  - Schedule day-of-week and working hours validation
+  - Booking conflict detection (duration-aware overlaps)
+  - UTC-based timezone-stable date handling
+- Guest user management via upsert pattern (automatic creation)
+- Public endpoint at `/api/chat` accessible from landing page
+- Server-side logging for debugging AI function calls
 
 ### Data Models
 
@@ -108,6 +123,18 @@ Draws inspiration from premium booking platforms (Airbnb UX, Treatwell flows, Gl
 - Stylists ↔ Services (many-to-many via junction table)
 - Services → Bookings (one-to-many)
 - Stylists → Bookings (one-to-many)
+
+**Database State:**
+- **Stylist Schedules (populated):**
+  - Emma Rodriguez: Monday-Saturday, 9am-5pm
+  - Sophia Chen: Monday-Saturday, 9am-7pm
+  - Isabella Martinez: Tuesday-Saturday, 10am-6pm
+  - Olivia Thompson: Monday-Friday, 9am-5pm
+- **Stylist-Service Relationships (populated):**
+  - Each stylist mapped to their offered services via `stylist_services` junction table
+  - Enables validation during booking to ensure stylist offers requested service
+- **Services:** Classic Haircut, Color & Highlights, Balayage, Bridal Updo, Keratin Treatment, Blowout, Hair Extensions (with pricing, duration, descriptions)
+- **Test Users:** Maria Garcia (guest user created via AI booking flow)
 
 ### Build & Deployment
 
