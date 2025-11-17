@@ -88,15 +88,22 @@ export function ChatWidget() {
       <Button
         id="chat-widget-trigger"
         size="icon"
-        className="fixed bottom-4 right-4 md:bottom-6 md:right-6 w-14 h-14 md:w-16 md:h-16 rounded-full shadow-xl bg-primary hover:bg-primary z-[9999]"
+        className="w-16 h-16 rounded-full shadow-xl bg-primary hover:bg-primary"
+        style={{ 
+          position: 'fixed', 
+          bottom: '24px', 
+          right: '24px', 
+          zIndex: 9999,
+          left: 'auto'
+        }}
         onClick={() => setIsOpen(!isOpen)}
         aria-label={isOpen ? "Close chat" : "Open chat"}
         data-testid="button-chat-toggle"
       >
         {isOpen ? (
-          <X className="w-6 h-6 md:w-8 md:h-8" />
+          <X className="w-8 h-8" />
         ) : (
-          <MessageCircle className="w-6 h-6 md:w-8 md:h-8" />
+          <MessageCircle className="w-8 h-8" />
         )}
       </Button>
 
