@@ -282,7 +282,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const [year, month, day] = date.split('-').map(Number);
       const requestDate = new Date(Date.UTC(year, month - 1, day));
       const dayIndex = requestDate.getUTCDay(); // 0 = Sunday, 6 = Saturday
-      const daySchedule = schedules.find(s => parseInt(s.dayOfWeek, 10) === dayIndex && s.isAvailable);
+      const daySchedule = schedules.find(s => s.dayOfWeek === dayIndex && s.isAvailable);
       
       const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
       if (!daySchedule) {
@@ -471,7 +471,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const dayIndex = requestDate.getUTCDay(); // 0 = Sunday, 6 = Saturday
       
       const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-      const daySchedule = schedules.find(s => parseInt(s.dayOfWeek, 10) === dayIndex && s.isAvailable);
+      const daySchedule = schedules.find(s => s.dayOfWeek === dayIndex && s.isAvailable);
       if (!daySchedule) {
         return res.json({ 
           available: false, 
@@ -633,18 +633,19 @@ BOOKING PROCESS (follow in order):
 3. COLLECT DATE: Ask "When would you like your appointment?" (accept natural language like "tomorrow", "Friday", etc.)
 4. COLLECT TIME: Ask "What time works best?" (accept "2pm", "morning", "afternoon", etc.)
 5. CHECK AVAILABILITY: IMMEDIATELY call check_availability function (with converted YYYY-MM-DD and HH:MM)
-6. If available: COLLECT CONTACT INFO (full name, email, phone number)
+6. If available: Tell them the slot is available, then ASK for contact info (full name, email, phone number)
 7. If unavailable: Suggest alternative times and repeat from step 4
-8. Once you have contact info + confirmed availability: IMMEDIATELY call create_booking function
-9. After successful booking: Provide confirmation with all booking details
+8. Once you have ALL contact info: IMMEDIATELY call create_booking function - DO NOT SAY "CONFIRMED" YET!
+9. ONLY AFTER create_booking returns success: Provide confirmation with all booking details
 
-CRITICAL RULES:
+CRITICAL RULES - FOLLOW EXACTLY:
+- NEVER say "confirmed", "booked", or "appointment created" UNTIL you have CALLED create_booking AND received a success response
+- After check_availability returns available=true, you MUST ask for contact info (name, email, phone)
+- After receiving contact info, you MUST call create_booking function
+- Do NOT skip calling create_booking - it is REQUIRED to actually create the booking in the database
+- The booking does NOT exist until create_booking is called successfully
 - MUST call check_availability as soon as you have service, stylist, date, time
-- MUST call create_booking as soon as you have contact info + confirmed availability
 - Do NOT ask for contact info before checking availability
-- Do NOT ask to "confirm availability again" after already checking it
-- Once availability is confirmed and contact info collected, CREATE THE BOOKING immediately
-- Be conversational but efficient - avoid unnecessary back-and-forth
 - ALWAYS convert natural language dates/times to proper formats before calling functions
 
 Current Services:
