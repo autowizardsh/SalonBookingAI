@@ -30,7 +30,7 @@ async function seedProduction() {
       {
         id: '401950fd-455b-473d-9387-aab6edfe85ec',
         username: 'admin',
-        password_hash: '$2b$10$wZR0OF0HnU4tCx8ADlw0M..LhctHKO.Tu4UAnbjTFXj4qjsQjwXyC',
+        passwordHash: '$2b$10$wZR0OF0HnU4tCx8ADlw0M..LhctHKO.Tu4UAnbjTFXj4qjsQjwXyC',
         email: 'admin@salon.com',
         firstName: 'Admin',
         lastName: 'User',
@@ -40,34 +40,34 @@ async function seedProduction() {
       {
         id: '9e9f5558-e1e5-48cf-a549-a0d80a410d99',
         username: 'emma',
-        password_hash: '$2b$10$Y7tzop2aBujzwPCSYzIRg.iWmevM9L4g2noCytMYOfKzEDwrgxRvi',
+        passwordHash: '$2b$10$Y7tzop2aBujzwPCSYzIRg.iWmevM9L4g2noCytMYOfKzEDwrgxRvi',
         email: 'emma@salon.com',
         firstName: 'Emma',
         lastName: 'Rodriguez',
         role: 'stylist',
-        stylist_id: '2ad50aef-0970-47c3-bcbd-a6207a892bff',
+        stylistId: '2ad50aef-0970-47c3-bcbd-a6207a892bff',
         provider: 'local'
       },
       {
         id: 'cebfe12c-2e20-49b0-9108-4c69b4d5858e',
         username: 'sophia',
-        password_hash: '$2b$10$KGhyOKCLzcJBJeRpZiB1qe2VHlmqDoKQFOOZ45GMqmZsPM8BB6/sC',
+        passwordHash: '$2b$10$KGhyOKCLzcJBJeRpZiB1qe2VHlmqDoKQFOOZ45GMqmZsPM8BB6/sC',
         email: 'sophia@salon.com',
         firstName: 'Sophia',
         lastName: 'Chen',
         role: 'stylist',
-        stylist_id: 'd3b4d006-6490-447d-be49-7a79ea49c975',
+        stylistId: 'd3b4d006-6490-447d-be49-7a79ea49c975',
         provider: 'local'
       },
       {
         id: '3b143cc9-0b48-40c6-a399-c03be94be596',
         username: 'isabella',
-        password_hash: '$2b$10$COQ1f6W0OA0a96FMe8Br0Ote8FZG1hDKgyZrWyhq5IxSFZrNIQ8/O',
+        passwordHash: '$2b$10$COQ1f6W0OA0a96FMe8Br0Ote8FZG1hDKgyZrWyhq5IxSFZrNIQ8/O',
         email: 'isabella@salon.com',
         firstName: 'Isabella',
         lastName: 'Martinez',
         role: 'stylist',
-        stylist_id: 'ede1b989-9980-4485-a80c-4a308eb1a899',
+        stylistId: 'ede1b989-9980-4485-a80c-4a308eb1a899',
         provider: 'local'
       }
     ]).onConflictDoNothing();
