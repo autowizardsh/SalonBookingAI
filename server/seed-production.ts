@@ -136,7 +136,7 @@ async function seedProduction() {
         bio: 'Master stylist with a passion for creating personalized looks that enhance natural beauty',
         specialization: 'Color & Highlights',
         yearsExperience: 8,
-        rating: 4.9
+        rating: 5
       },
       {
         id: 'd3b4d006-6490-447d-be49-7a79ea49c975',
@@ -144,7 +144,7 @@ async function seedProduction() {
         bio: 'Precision cutting specialist known for modern, sophisticated styles',
         specialization: 'Precision Cuts',
         yearsExperience: 6,
-        rating: 4.8
+        rating: 5
       },
       {
         id: 'ede1b989-9980-4485-a80c-4a308eb1a899',
@@ -152,7 +152,7 @@ async function seedProduction() {
         bio: 'Wedding and special event styling expert with an eye for elegant updos',
         specialization: 'Bridal & Events',
         yearsExperience: 10,
-        rating: 5.0
+        rating: 5
       },
       {
         id: 'cbbf87a2-26ac-432f-aa93-b46568545557',
@@ -160,7 +160,7 @@ async function seedProduction() {
         bio: 'Texture and treatment specialist focusing on hair health',
         specialization: 'Treatments',
         yearsExperience: 7,
-        rating: 4.7
+        rating: 5
       }
     ]).onConflictDoNothing();
     console.log("✅ Stylists inserted");
