@@ -24,9 +24,9 @@ async function seedProduction() {
   const db = drizzle(sql, { schema });
 
   try {
-    // Insert Users
-    console.log("📝 Inserting users...");
-    await db.insert(schema.users).values([
+    // Insert Users (with upsert to update existing records)
+    console.log("📝 Upserting users...");
+    const usersToInsert = [
       {
         id: '401950fd-455b-473d-9387-aab6edfe85ec',
         username: 'admin',
@@ -70,7 +70,23 @@ async function seedProduction() {
         stylistId: 'ede1b989-9980-4485-a80c-4a308eb1a899',
         provider: 'local'
       }
-    ]).onConflictDoNothing();
+    ];
+    
+    for (const user of usersToInsert) {
+      await db.insert(schema.users).values(user).onConflictDoUpdate({
+        target: schema.users.id,
+        set: {
+          username: user.username,
+          passwordHash: user.passwordHash,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          role: user.role,
+          stylistId: user.stylistId,
+          provider: user.provider
+        }
+      });
+    }
     console.log("✅ Users inserted");
 
     // Insert Services
