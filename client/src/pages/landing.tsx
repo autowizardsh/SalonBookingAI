@@ -35,8 +35,8 @@ export default function Landing() {
     queryKey: ["/api/stylists"],
   });
 
-  const featuredServices = services.slice(0, 6);
-  const featuredStylists = stylists.slice(0, 3);
+  const featuredServices = services;
+  const featuredStylists = stylists;
 
   const scrollToBooking = () => {
     const chatWidget = document.getElementById("chat-widget-trigger");
