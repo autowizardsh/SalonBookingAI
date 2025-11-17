@@ -1,8 +1,10 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useQuery } from "@tanstack/react-query";
-import { Star, Clock, DollarSign, Calendar, Scissors, Sparkles, LogIn } from "lucide-react";
+import { Star, Clock, DollarSign, Calendar, Scissors, Sparkles, LogIn, Menu } from "lucide-react";
 import { Link } from "wouter";
 import type { Service, Stylist } from "@shared/schema";
 import heroImage from "@assets/generated_images/Salon_hero_interior_shot_9deda2ec.png";
@@ -27,6 +29,8 @@ const serviceImages: Record<string, string> = {
 const stylistImages = [stylist1Image, stylist2Image, stylist3Image];
 
 export default function Landing() {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  
   const { data: services = [] } = useQuery<Service[]>({
     queryKey: ["/api/services"],
   });
@@ -39,6 +43,7 @@ export default function Landing() {
   const featuredStylists = stylists;
 
   const scrollToBooking = () => {
+    setMobileMenuOpen(false);
     const chatWidget = document.getElementById("chat-widget-trigger");
     if (chatWidget) {
       chatWidget.click();
@@ -56,6 +61,7 @@ export default function Landing() {
               <Scissors className="w-6 h-6 text-primary" />
               <span className="text-xl font-serif font-semibold">Elegance Salon</span>
             </div>
+            
             <nav className="hidden md:flex items-center gap-6">
               <a href="#services" className="text-sm hover-elevate px-3 py-2 rounded-md" data-testid="link-services">Services</a>
               <a href="#stylists" className="text-sm hover-elevate px-3 py-2 rounded-md" data-testid="link-stylists">Stylists</a>
@@ -70,6 +76,51 @@ export default function Landing() {
                 Book Now
               </Button>
             </nav>
+
+            <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" className="md:hidden" data-testid="button-mobile-menu">
+                  <Menu className="w-6 h-6" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-64">
+                <nav className="flex flex-col gap-4 mt-8">
+                  <a 
+                    href="#services" 
+                    className="text-base hover-elevate px-4 py-3 rounded-md" 
+                    onClick={() => setMobileMenuOpen(false)}
+                    data-testid="link-services-mobile"
+                  >
+                    Services
+                  </a>
+                  <a 
+                    href="#stylists" 
+                    className="text-base hover-elevate px-4 py-3 rounded-md"
+                    onClick={() => setMobileMenuOpen(false)}
+                    data-testid="link-stylists-mobile"
+                  >
+                    Stylists
+                  </a>
+                  <a 
+                    href="#testimonials" 
+                    className="text-base hover-elevate px-4 py-3 rounded-md"
+                    onClick={() => setMobileMenuOpen(false)}
+                    data-testid="link-testimonials-mobile"
+                  >
+                    Testimonials
+                  </a>
+                  <Link href="/login">
+                    <Button variant="ghost" className="w-full justify-start" data-testid="button-staff-login-mobile">
+                      <LogIn className="w-4 h-4 mr-2" />
+                      Staff Login
+                    </Button>
+                  </Link>
+                  <Button onClick={scrollToBooking} className="w-full" data-testid="button-book-now-mobile">
+                    Book Now
+                  </Button>
+                </nav>
+              </SheetContent>
+            </Sheet>
           </div>
         </div>
       </header>
