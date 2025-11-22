@@ -107,6 +107,29 @@ Draws inspiration from premium booking platforms (Airbnb UX, Treatwell flows, Gl
 - Public endpoint at `/api/chat` accessible from landing page
 - Server-side logging for debugging AI function calls
 
+**Email Notification System:**
+- **Service:** Resend integration for transactional emails (3,000 emails/month free tier)
+- **Confirmation Emails:** Sent immediately after successful booking creation
+  - Professional HTML templates with salon branding
+  - Includes booking details: service, stylist, date, time, price, duration
+  - Customer name and contact information
+  - Sent to `customerEmail` provided during booking
+- **Reminder Emails:** Sent 24 hours before appointments
+  - Daily scheduler runs at 9:00 AM (America/New_York timezone)
+  - Checks for next-day appointments with `status: 'pending'`
+  - Same template structure as confirmation emails
+  - Timezone-aware using Luxon library to prevent drift
+- **Implementation:**
+  - Email utilities in `server/email.ts`
+  - Scheduler logic in `server/scheduler.ts`
+  - Reminder endpoint at `POST /api/send-reminders`
+  - Graceful error handling (bookings succeed even if email fails)
+  - Console logging for debugging email sends
+- **Configuration:**
+  - Timezone: `SALON_TIMEZONE = "America/New_York"` (configurable)
+  - Reminder time: 9:00 AM salon local time
+  - Environment variable: `RESEND_API_KEY` (managed via Resend connector)
+
 ### Data Models
 
 **Core Entities:**
