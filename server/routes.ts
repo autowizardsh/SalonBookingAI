@@ -9,6 +9,7 @@ import {
   insertBookingSchema,
   insertScheduleSchema,
 } from "@shared/schema";
+import { sendBookingConfirmation, sendAppointmentReminder } from "./email";
 
 // Initialize OpenAI client using Replit AI Integrations
 // This provides OpenAI-compatible API access without requiring your own API key
@@ -342,6 +343,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         customerPhone: customerPhone || null,
         notes: notes || null,
       });
+
+      // Send confirmation email
+      try {
+        const stylist = await storage.getStylist(stylistId);
+        if (stylist) {
+          await sendBookingConfirmation({
+            customerName,
+            customerEmail,
+            serviceName: service.name,
+            stylistName: stylist.name,
+            date,
+            time,
+            price: service.price,
+            duration: service.duration,
+          });
+          console.log('[EMAIL] Confirmation email sent to:', customerEmail);
+        }
+      } catch (emailError) {
+        console.error('[EMAIL ERROR] Failed to send confirmation email:', emailError);
+        // Don't fail the booking if email fails
+      }
 
       res.status(201).json({ 
         success: true, 
@@ -765,6 +787,73 @@ Be friendly, helpful, and guide them smoothly through the booking!`;
     } catch (error: any) {
       console.error("Chat error:", error);
       res.status(500).json({ message: "Failed to process chat message" });
+    }
+  });
+
+  // Send reminder emails for tomorrow's appointments
+  app.post("/api/send-reminders", async (req: Request, res: Response) => {
+    try {
+      // Calculate tomorrow's date
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const tomorrowStr = tomorrow.toISOString().split('T')[0];
+
+      // Get all bookings for tomorrow
+      const allBookings = await storage.getAllBookings();
+      const tomorrowBookings = allBookings.filter(b => 
+        b.date === tomorrowStr && 
+        b.status === 'pending' &&
+        b.customerEmail
+      );
+
+      console.log(`[REMINDERS] Found ${tomorrowBookings.length} appointments for ${tomorrowStr}`);
+
+      const results = [];
+      for (const booking of tomorrowBookings) {
+        try {
+          const [service, stylist] = await Promise.all([
+            storage.getService(booking.serviceId),
+            storage.getStylist(booking.stylistId)
+          ]);
+
+          if (service && stylist && booking.customerEmail && booking.customerName) {
+            await sendAppointmentReminder({
+              customerName: booking.customerName,
+              customerEmail: booking.customerEmail,
+              serviceName: service.name,
+              stylistName: stylist.name,
+              date: booking.date,
+              time: booking.time,
+              price: service.price,
+              duration: service.duration,
+            });
+            
+            results.push({ 
+              bookingId: booking.id, 
+              email: booking.customerEmail, 
+              status: 'sent' 
+            });
+            console.log(`[REMINDERS] Sent to ${booking.customerEmail}`);
+          }
+        } catch (error) {
+          console.error(`[REMINDERS ERROR] Failed for booking ${booking.id}:`, error);
+          results.push({ 
+            bookingId: booking.id, 
+            email: booking.customerEmail, 
+            status: 'failed' 
+          });
+        }
+      }
+
+      res.json({ 
+        success: true, 
+        date: tomorrowStr,
+        totalBookings: tomorrowBookings.length,
+        results 
+      });
+    } catch (error: any) {
+      console.error("[REMINDERS ERROR]:", error);
+      res.status(500).json({ message: error.message });
     }
   });
 
