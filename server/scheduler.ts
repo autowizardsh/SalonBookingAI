@@ -1,6 +1,10 @@
 // Simple scheduler for sending daily appointment reminders
-// Runs every day at 9:00 AM to send reminders for tomorrow's appointments
+// Runs every day at 9:00 AM (salon timezone) to send reminders for tomorrow's appointments
 
+import { DateTime } from "luxon";
+
+// Salon timezone - must match the timezone in routes.ts
+const SALON_TIMEZONE = "America/New_York";
 const REMINDER_HOUR = 9; // 9 AM
 const REMINDER_MINUTE = 0;
 const CHECK_INTERVAL_MS = 60 * 1000; // Check every minute
@@ -9,14 +13,15 @@ let lastRunDate: string | null = null;
 
 export function startReminderScheduler() {
   console.log('[SCHEDULER] Starting appointment reminder scheduler...');
-  console.log(`[SCHEDULER] Will send reminders daily at ${REMINDER_HOUR}:${String(REMINDER_MINUTE).padStart(2, '0')}`);
+  console.log(`[SCHEDULER] Will send reminders daily at ${REMINDER_HOUR}:${String(REMINDER_MINUTE).padStart(2, '0')} ${SALON_TIMEZONE}`);
   
   // Check every minute if it's time to send reminders
   setInterval(async () => {
-    const now = new Date();
-    const currentHour = now.getHours();
-    const currentMinute = now.getMinutes();
-    const currentDate = now.toISOString().split('T')[0];
+    // Get current time in salon timezone
+    const now = DateTime.now().setZone(SALON_TIMEZONE);
+    const currentHour = now.hour;
+    const currentMinute = now.minute;
+    const currentDate = now.toFormat('yyyy-MM-dd');
     
     // Check if it's the right time and we haven't run today
     if (

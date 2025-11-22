@@ -10,6 +10,10 @@ import {
   insertScheduleSchema,
 } from "@shared/schema";
 import { sendBookingConfirmation, sendAppointmentReminder } from "./email";
+import { DateTime } from "luxon";
+
+// Salon timezone - change this to match your salon's location
+const SALON_TIMEZONE = "America/New_York";
 
 // Initialize OpenAI client using Replit AI Integrations
 // This provides OpenAI-compatible API access without requiring your own API key
@@ -793,10 +797,9 @@ Be friendly, helpful, and guide them smoothly through the booking!`;
   // Send reminder emails for tomorrow's appointments
   app.post("/api/send-reminders", async (req: Request, res: Response) => {
     try {
-      // Calculate tomorrow's date
-      const tomorrow = new Date();
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      const tomorrowStr = tomorrow.toISOString().split('T')[0];
+      // Calculate tomorrow's date in salon timezone
+      const tomorrow = DateTime.now().setZone(SALON_TIMEZONE).plus({ days: 1 });
+      const tomorrowStr = tomorrow.toFormat('yyyy-MM-dd');
 
       // Get all bookings for tomorrow
       const allBookings = await storage.getAllBookings();
