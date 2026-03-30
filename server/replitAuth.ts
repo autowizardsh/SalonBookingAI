@@ -1,32 +1,10 @@
-import * as client from "openid-client";
-import { Strategy, type VerifyFunction } from "openid-client/passport";
-
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
 import bcrypt from "bcrypt";
 import session from "express-session";
 import type { Express, RequestHandler } from "express";
-import memoize from "memoizee";
 import connectPg from "connect-pg-simple";
 import { storage } from "./storage";
-
-// Check if Replit Auth is available (only works on Replit platform)
-const isReplitAuthAvailable = () => {
-  return !!(process.env.REPL_ID && process.env.ISSUER_URL);
-};
-
-const getOidcConfig = memoize(
-  async () => {
-    if (!isReplitAuthAvailable()) {
-      return null;
-    }
-    return await client.discovery(
-      new URL(process.env.ISSUER_URL ?? "https://replit.com/oidc"),
-      process.env.REPL_ID!
-    );
-  },
-  { maxAge: 3600 * 1000 }
-);
 
 export function getSession() {
   const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
@@ -50,61 +28,12 @@ export function getSession() {
   });
 }
 
-function updateUserSession(
-  user: any,
-  tokens: client.TokenEndpointResponse & client.TokenEndpointResponseHelpers
-) {
-  user.claims = tokens.claims();
-  user.access_token = tokens.access_token;
-  user.refresh_token = tokens.refresh_token;
-  user.expires_at = user.claims?.exp;
-}
-
-async function upsertUser(
-  claims: any,
-) {
-  console.log("[Auth] Upserting user:", claims["sub"], claims["email"]);
-  const existingUser = await storage.getUser(claims["sub"]);
-  console.log("[Auth] Existing user found:", !!existingUser, existingUser?.role);
-  
-  // If user already exists, update their profile but preserve their role
-  if (existingUser) {
-    console.log("[Auth] Updating existing user, preserving role:", existingUser.role);
-    await storage.upsertUser({
-      id: claims["sub"],
-      email: claims["email"],
-      firstName: claims["first_name"],
-      lastName: claims["last_name"],
-      profileImageUrl: claims["profile_image_url"],
-      role: existingUser.role, // Preserve existing role
-    });
-    return;
-  }
-  
-  // For new users, check if this is the first user in the system
-  const allUsers = await storage.getAllUsers();
-  const isFirstUser = allUsers.length === 0;
-  console.log("[Auth] Creating new user. Total users:", allUsers.length, "Is first user:", isFirstUser);
-  
-  // First user becomes admin, all others are customers
-  await storage.upsertUser({
-    id: claims["sub"],
-    email: claims["email"],
-    firstName: claims["first_name"],
-    lastName: claims["last_name"],
-    profileImageUrl: claims["profile_image_url"],
-    role: isFirstUser ? "admin" : "customer",
-  });
-  console.log("[Auth] User created with role:", isFirstUser ? "admin" : "customer");
-}
-
 export async function setupAuth(app: Express) {
   app.set("trust proxy", 1);
   app.use(getSession());
   app.use(passport.initialize());
   app.use(passport.session());
 
-  // Local strategy for username/password authentication (always available)
   passport.use(new LocalStrategy(
     async (username, password, done) => {
       try {
@@ -118,7 +47,6 @@ export async function setupAuth(app: Express) {
           return done(null, false, { message: "Invalid username or password" });
         }
 
-        // Return full user object for local auth (includes role, email, etc.)
         return done(null, {
           id: user.id,
           provider: 'local',
@@ -136,7 +64,6 @@ export async function setupAuth(app: Express) {
   passport.serializeUser((user: Express.User, cb) => cb(null, user));
   passport.deserializeUser((user: Express.User, cb) => cb(null, user));
 
-  // Local username/password login endpoint (always available)
   app.post("/api/login/local", (req, res, next) => {
     passport.authenticate("local", (err: any, user: any, info: any) => {
       if (err) {
@@ -145,7 +72,7 @@ export async function setupAuth(app: Express) {
       if (!user) {
         return res.status(401).json({ message: info?.message || "Invalid credentials" });
       }
-      
+
       req.login(user, (loginErr) => {
         if (loginErr) {
           return res.status(500).json({ message: "Login failed" });
@@ -155,140 +82,26 @@ export async function setupAuth(app: Express) {
     })(req, res, next);
   });
 
-  // Only set up Replit Auth if REPL_ID is available (Replit platform only)
-  if (isReplitAuthAvailable()) {
-    console.log("[Auth] Replit Auth enabled (REPL_ID detected)");
-    
-    const config = await getOidcConfig();
-    if (!config) {
-      console.warn("[Auth] Failed to get OIDC config, skipping Replit Auth setup");
-      return;
-    }
+  app.get("/api/login", (req, res) => {
+    res.redirect("/login");
+  });
 
-    const verify: VerifyFunction = async (
-      tokens: client.TokenEndpointResponse & client.TokenEndpointResponseHelpers,
-      verified: passport.AuthenticateCallback
-    ) => {
-      const user = {};
-      updateUserSession(user, tokens);
-      await upsertUser(tokens.claims());
-      verified(null, user);
-    };
-
-    // Keep track of registered strategies
-    const registeredStrategies = new Set<string>();
-
-    // Helper function to ensure strategy exists for a domain
-    const ensureStrategy = (domain: string) => {
-      const strategyName = `replitauth:${domain}`;
-      if (!registeredStrategies.has(strategyName)) {
-        const strategy = new Strategy(
-          {
-            name: strategyName,
-            config,
-            scope: "openid email profile offline_access",
-            callbackURL: `https://${domain}/api/callback`,
-          },
-          verify,
-        );
-        passport.use(strategy);
-        registeredStrategies.add(strategyName);
-      }
-    };
-
-    app.get("/api/login", (req, res, next) => {
-      ensureStrategy(req.hostname);
-      passport.authenticate(`replitauth:${req.hostname}`, {
-        prompt: "login consent",
-        scope: ["openid", "email", "profile", "offline_access"],
-      })(req, res, next);
+  app.get("/api/logout", (req, res) => {
+    req.logout(() => {
+      res.redirect("/");
     });
-
-    app.get("/api/callback", (req, res, next) => {
-      ensureStrategy(req.hostname);
-      passport.authenticate(`replitauth:${req.hostname}`, {
-        successReturnToOrRedirect: "/",
-        failureRedirect: "/api/login",
-      })(req, res, next);
-    });
-
-    app.get("/api/logout", (req, res) => {
-      req.logout(() => {
-        res.redirect(
-          client.buildEndSessionUrl(config, {
-            client_id: process.env.REPL_ID!,
-            post_logout_redirect_uri: `${req.protocol}://${req.hostname}`,
-          }).href
-        );
-      });
-    });
-  } else {
-    console.log("[Auth] Replit Auth disabled (no REPL_ID) - using guest booking + staff login only");
-    
-    // Provide fallback routes that explain the situation
-    app.get("/api/login", (req, res) => {
-      res.status(503).json({ 
-        message: "Customer login is not available on this platform. Please use the chatbot for guest booking, or use staff login at /login" 
-      });
-    });
-
-    app.get("/api/logout", (req, res) => {
-      req.logout(() => {
-        res.redirect("/");
-      });
-    });
-  }
+  });
 }
 
 export const isAuthenticated: RequestHandler = async (req, res, next) => {
-  const user = req.user as any;
-
   if (!req.isAuthenticated()) {
     return res.status(401).json({ message: "Unauthorized" });
   }
-
-  // If user authenticated via local strategy (username/password), no token refresh needed
-  if (user.provider === 'local') {
-    return next();
-  }
-
-  // For OIDC users, check token expiration (only on Replit)
-  if (!isReplitAuthAvailable()) {
-    return next();
-  }
-
-  if (!user.expires_at) {
-    return res.status(401).json({ message: "Unauthorized" });
-  }
-
-  const now = Math.floor(Date.now() / 1000);
-  if (now <= user.expires_at) {
-    return next();
-  }
-
-  const refreshToken = user.refresh_token;
-  if (!refreshToken) {
-    res.status(401).json({ message: "Unauthorized" });
-    return;
-  }
-
-  try {
-    const config = await getOidcConfig();
-    if (!config) {
-      return res.status(401).json({ message: "Unauthorized" });
-    }
-    const tokenResponse = await client.refreshTokenGrant(config, refreshToken);
-    updateUserSession(user, tokenResponse);
-    return next();
-  } catch (error) {
-    res.status(401).json({ message: "Unauthorized" });
-    return;
-  }
+  return next();
 };
 
-// Helper function to get userId from request (supports both OIDC and local auth)
 export function getRequestUserId(req: any): string | null {
   const user = req.user as any;
   if (!user) return null;
-  return user.provider === 'local' ? user.id : user.claims?.sub || null;
+  return user.id || null;
 }
